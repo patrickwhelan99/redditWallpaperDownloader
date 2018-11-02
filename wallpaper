@@ -1,0 +1,138 @@
+#!/bin/env bash
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" # Get the script's current directory
+
+
+function printUsage {
+echo -e "Usage:\n\t-l:\t Filename to take links from\n\t-q:\tEnables quiet mode";
+}
+
+enableQuiet=false
+
+while getopts "l:q" o; do
+    case "${o}" in
+        l)
+            linksFile=${OPTARG}
+            ;;
+        q)
+            enableQuiet=${OPTARG}
+            ;;
+        *)
+	    printUsage
+	    exit -1
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [[ "$linksFile" == "" ]]; then
+	printUsage
+	echo -e "\n\nAssuming links file is \"links\""
+	linksFile="links"
+fi
+
+
+
+mkdir $DIR/downloads
+cd $DIR/downloads
+
+
+function progressBar {
+
+echo -n "["
+b=$1
+while(($b>0))
+do
+	let "b--"
+	echo -n "###"
+done
+a=$(($1 - 10))
+while(($a<0))
+do
+	let "a++"
+	echo -n "   "
+done
+	echo -n "]"
+	v=$(($1 * 10))
+	echo  -n "$v%" $'\r' # carriage return, returns to the beginning of the current line
+
+}
+
+
+function parse {
+grep -o -E 'href="([^"#]+)"' $1 | cut -d'"' -f2 | sort | uniq | grep -E '.jpg|.png' >> temp
+grep -o -E 'href="([^"#]+)"' $2 | cut -d'"' -f2 | sort | uniq | grep -E '.jpg|.png' >> temp
+grep -o -E 'href="([^"#]+)"' $3 | cut -d'"' -f2 | sort | uniq | grep -E '.jpg|.png' >> temp
+grep -o -E 'href="([^"#]+)"' $4 | cut -d'"' -f2 | sort | uniq | grep -E '.jpg|.png' >> temp
+}
+
+function foo {
+rname=$( echo $1 | cut -d / -f 5  )
+tname=$(echo t.$rname)
+rrname=$(echo r.$rname)
+cname=$(echo c.$rname)
+wget --load-cookies=../cookies.txt -O $rname $1  &>/dev/null &
+wget --load-cookies=../cookies.txt -O $tname $1/top &>/dev/null &
+wget --load-cookies=../cookies.txt -O $rrname $1/rising &>/dev/null &
+wget --load-cookies=../cookies.txt -O $cname $1/controversial &>/dev/null &
+wait
+parse $rname $tname $rrname $cname
+}
+
+
+if [[ $enableQuiet == false ]]; then
+	cat $DIR/$linksFile | cut -d\/ -f "5" | column -x 
+fi
+
+pids=""
+while read l; do
+   if [[ $l != *"#"* ]]; then # if line doesn't contain a hashtag (comment)
+	foo $l&
+	pids+=" "$!""
+   fi
+done < ../$linksFile
+
+if [[ $enableQuiet == false ]]; then
+
+	percentage=0;
+	finished=0;
+	links=$(($(wc -l $DIR/$linksFile | cut -d' ' -f 1)))
+	total=$(($links*4))
+	while(($(pidof wget | wc -w) != 0))
+	do
+		finished=$(($total - $(pidof wget | wc -w)))
+		percentage=$(bc -l <<< $finished/$total*100) #   $((($finished/$total) *100))
+		r=$(echo "($percentage+0.5)/1" | bc )
+		p=$(($r/10))
+		progressBar $p
+	done
+
+finished=$(($total - $(pidof wget | wc -w)))
+percentage=$(bc -l <<< $finished/$total*100)
+r=$(echo "($percentage+0.5)/1" | bc )
+p=$(($r/10))
+progressBar $p
+
+
+echo -e "\n" # newline so after script is finished user isn't at beginning of progress bar
+
+fi
+
+wait # wait for all processes to return
+
+# remove reddit pics that exist on most pages from the list
+sed -i '/www.redditstatic.com\//d' temp
+sed -i '/styles.redditmedia.com\//d' temp
+
+# select randomly from file and DL
+wallpaper=$(shuf -n 1 temp)
+
+echo $wallpaper >> ../log
+
+wget -b $wallpaper -O $DIR/wallpaperpic 1>/dev/null&
+wait
+gsettings set org.gnome.desktop.background picture-uri file://$DIR/wallpaperpic
+
+# cleanup
+cd ~
+rm -r $DIR/downloads
