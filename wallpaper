@@ -1,10 +1,10 @@
-#!/bin/env bash
+#!/bin/bash
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" # Get the script's current directory
 
 
 function printUsage {
-echo -e "Usage:\n\t-l:\t Filename to take links from\n\t-q:\tEnables quiet mode";
+echo -e "Usage:\n\t-l:\tFilename to take links from\n\t-q:\tEnables quiet mode";
 }
 
 enableQuiet=false
@@ -26,37 +26,16 @@ done
 shift $((OPTIND-1))
 
 if [[ "$linksFile" == "" ]]; then
-	printUsage
-	echo -e "\n\nAssuming links file is \"links\""
 	linksFile="links"
+	if [[ $enableQuiet == false ]]; then
+		echo -e "\n\nAssuming links file is \"links\""
+	fi
 fi
 
 
 
 mkdir $DIR/downloads
 cd $DIR/downloads
-
-
-function progressBar {
-
-echo -n "["
-b=$1
-while(($b>0))
-do
-	let "b--"
-	echo -n "###"
-done
-a=$(($1 - 10))
-while(($a<0))
-do
-	let "a++"
-	echo -n "   "
-done
-	echo -n "]"
-	v=$(($1 * 10))
-	echo  -n "$v%" $'\r' # carriage return, returns to the beginning of the current line
-
-}
 
 
 function parse {
@@ -66,7 +45,7 @@ grep -o -E 'href="([^"#]+)"' $3 | cut -d'"' -f2 | sort | uniq | grep -E '.jpg|.p
 grep -o -E 'href="([^"#]+)"' $4 | cut -d'"' -f2 | sort | uniq | grep -E '.jpg|.png' >> temp
 }
 
-function foo {
+function downloadPages {
 rname=$( echo $1 | cut -d / -f 5  )
 tname=$(echo t.$rname)
 rrname=$(echo r.$rname)
@@ -81,57 +60,45 @@ parse $rname $tname $rrname $cname
 
 
 if [[ $enableQuiet == false ]]; then
-	cat $DIR/$linksFile | cut -d\/ -f "5" | column -x 
+	cat $DIR/$linksFile | cut -d\/ -f "5" | column -x
 fi
 
-pids=""
-while read l; do
-   if [[ $l != *"#"* ]]; then # if line doesn't contain a hashtag (comment)
-	foo $l&
+
+# Sometimes reddit doesn't populate the pages quick enough! We need to check there are images to download, if not try again
+while [ -z $wallpaper ]; do
+
+	subRedditChosenFrom="$(shuf -n 1 ../$linksFile)"
+	downloadPages "$subRedditChosenFrom"&
 	pids+=" "$!""
-   fi
-done < ../$linksFile
 
-if [[ $enableQuiet == false ]]; then
+	wait # wait for all processes to return
 
-	percentage=0;
-	finished=0;
-	links=$(($(wc -l $DIR/$linksFile | cut -d' ' -f 1)))
-	total=$(($links*4))
-	while(($(pidof wget | wc -w) != 0))
-	do
-		finished=$(($total - $(pidof wget | wc -w)))
-		percentage=$(bc -l <<< $finished/$total*100) #   $((($finished/$total) *100))
-		r=$(echo "($percentage+0.5)/1" | bc )
-		p=$(($r/10))
-		progressBar $p
-	done
+	# remove reddit pics that exist on most pages from the list
+	sed -i '/www.redditstatic.com\//d' temp
+	sed -i '/styles.redditmedia.com\//d' temp
+	sed -i '/i.imgur.com\/ZDka3tA.png/d' temp
+	sed -i '/i.imgur.com\/vFrZ1C9.png/d' temp
+	sed -i '/i.imgur.com\/FqnC5e2.png/d' temp
+	sed -i '/i.imgur.com\/4PxSX4e.png/d' temp
 
-finished=$(($total - $(pidof wget | wc -w)))
-percentage=$(bc -l <<< $finished/$total*100)
-r=$(echo "($percentage+0.5)/1" | bc )
-p=$(($r/10))
-progressBar $p
+	# select randomly from file and DL
+	wallpaper=$(shuf -n 1 temp)
 
+	if [[ $enableQuiet == false && ! -z $wallpaper ]]; then
+       		rname=$( echo $subRedditChosenFrom | cut -d / -f 5  )
+		echo -e "\nGrabbing image from r/$rname!"
+	fi
 
-echo -e "\n" # newline so after script is finished user isn't at beginning of progress bar
+done
 
-fi
-
-wait # wait for all processes to return
-
-# remove reddit pics that exist on most pages from the list
-sed -i '/www.redditstatic.com\//d' temp
-sed -i '/styles.redditmedia.com\//d' temp
-
-# select randomly from file and DL
-wallpaper=$(shuf -n 1 temp)
-
+echo -e "From r/$(echo $subRedditChosenFrom | cut -d '/' -f 5)" >> ../log
 echo $wallpaper >> ../log
+echo -e "\n" >> ../log
 
 wget -b $wallpaper -O $DIR/wallpaperpic 1>/dev/null&
 wait
 gsettings set org.gnome.desktop.background picture-uri file://$DIR/wallpaperpic
+#gsettings set org.gnome.desktop.background picture-options "zoom"
 
 # cleanup
 cd ~
