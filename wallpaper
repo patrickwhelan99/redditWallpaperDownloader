@@ -35,14 +35,13 @@ fi
 
 
 mkdir $DIR/downloads
-cd $DIR/downloads
 
 
 function parse {
-grep -o -E 'href="([^"#]+)"' $1 | cut -d'"' -f2 | sort | uniq | grep -E '.jpg|.png' >> temp
-grep -o -E 'href="([^"#]+)"' $2 | cut -d'"' -f2 | sort | uniq | grep -E '.jpg|.png' >> temp
-grep -o -E 'href="([^"#]+)"' $3 | cut -d'"' -f2 | sort | uniq | grep -E '.jpg|.png' >> temp
-grep -o -E 'href="([^"#]+)"' $4 | cut -d'"' -f2 | sort | uniq | grep -E '.jpg|.png' >> temp
+grep -o -E 'href="([^"#]+)"' $1 | cut -d'"' -f2 | sort | uniq | grep -E '.jpg|.png' >> $DIR/downloads/temp
+grep -o -E 'href="([^"#]+)"' $2 | cut -d'"' -f2 | sort | uniq | grep -E '.jpg|.png' >> $DIR/downloads/temp
+grep -o -E 'href="([^"#]+)"' $3 | cut -d'"' -f2 | sort | uniq | grep -E '.jpg|.png' >> $DIR/downloads/temp
+grep -o -E 'href="([^"#]+)"' $4 | cut -d'"' -f2 | sort | uniq | grep -E '.jpg|.png' >> $DIR/downloads/temp
 }
 
 function downloadPages {
@@ -50,39 +49,40 @@ rname=$( echo $1 | cut -d / -f 5  )
 tname=$(echo t.$rname)
 rrname=$(echo r.$rname)
 cname=$(echo c.$rname)
-wget --load-cookies=../cookies.txt -O $rname $1  &>/dev/null &
-wget --load-cookies=../cookies.txt -O $tname $1/top &>/dev/null &
-wget --load-cookies=../cookies.txt -O $rrname $1/rising &>/dev/null &
-wget --load-cookies=../cookies.txt -O $cname $1/controversial &>/dev/null &
+wget --load-cookies=$DIR/cookies.txt -O $DIR/downloads/$rname $1  &>/dev/null &
+wget --load-cookies=$DIR/cookies.txt -O $DIR/downloads/$tname $1/top &>/dev/null &
+wget --load-cookies=$DIR/cookies.txt -O $DIR/downloads/$rrname $1/rising &>/dev/null &
+wget --load-cookies=$DIR/cookies.txt -O $DIR/downloads/$cname $1/controversial &>/dev/null &
 wait
-parse $rname $tname $rrname $cname
+parse $DIR/downloads/$rname $DIR/downloads/$tname $DIR/downloads/$rrname $DIR/downloads/$cname
 }
 
 
 if [[ $enableQuiet == false ]]; then
-	cat $DIR/$linksFile | cut -d\/ -f "5" | column -x
+	echo -e "Subreddits to choose from\n"
+	cat $linksFile | grep -v -E "^#" | cut -d\/ -f "5" | column -x
 fi
 
 
 # Sometimes reddit doesn't populate the pages quick enough! We need to check there are images to download, if not try again
 while [ -z $wallpaper ]; do
 
-	subRedditChosenFrom="$(shuf -n 1 ../$linksFile)"
+	subRedditChosenFrom="$(shuf -n 1 $linksFile)"
 	downloadPages "$subRedditChosenFrom"&
 	pids+=" "$!""
 
 	wait # wait for all processes to return
 
 	# remove reddit pics that exist on most pages from the list
-	sed -i '/www.redditstatic.com\//d' temp
-	sed -i '/styles.redditmedia.com\//d' temp
-	sed -i '/i.imgur.com\/ZDka3tA.png/d' temp
-	sed -i '/i.imgur.com\/vFrZ1C9.png/d' temp
-	sed -i '/i.imgur.com\/FqnC5e2.png/d' temp
-	sed -i '/i.imgur.com\/4PxSX4e.png/d' temp
+	sed -i '/www.redditstatic.com\//d' $DIR/downloads/temp
+	sed -i '/styles.redditmedia.com\//d' $DIR/downloads/temp
+	sed -i '/i.imgur.com\/ZDka3tA.png/d' $DIR/downloads/temp
+	sed -i '/i.imgur.com\/vFrZ1C9.png/d' $DIR/downloads/temp
+	sed -i '/i.imgur.com\/FqnC5e2.png/d' $DIR/downloads/temp
+	sed -i '/i.imgur.com\/4PxSX4e.png/d' $DIR/downloads/temp
 
 	# select randomly from file and DL
-	wallpaper=$(shuf -n 1 temp)
+	wallpaper=$(shuf -n 1 $DIR/downloads/temp)
 
 	if [[ $enableQuiet == false && ! -z $wallpaper ]]; then
        		rname=$( echo $subRedditChosenFrom | cut -d / -f 5  )
@@ -91,12 +91,11 @@ while [ -z $wallpaper ]; do
 
 done
 
-echo -e "From r/$(echo $subRedditChosenFrom | cut -d '/' -f 5)" >> ../log
-echo $wallpaper >> ../log
-echo -e "\n" >> ../log
+echo -e "From r/$(echo $subRedditChosenFrom | cut -d '/' -f 5)" >> $DIR/log
+echo $wallpaper >> $DIR/log
+echo -e "\n" >> $DIR/log
 
-wget -b $wallpaper -O $DIR/wallpaperpic 1>/dev/null&
-wait
+wget --load-cookies=$DIR/cookies.txt $wallpaper -O $DIR/wallpaperpic &> /dev/null
 gsettings set org.gnome.desktop.background picture-uri file://$DIR/wallpaperpic
 #gsettings set org.gnome.desktop.background picture-options "zoom"
 
