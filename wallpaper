@@ -95,7 +95,8 @@ echo -e "From r/$(echo $subRedditChosenFrom | cut -d '/' -f 5)" >> $DIR/log
 echo $wallpaper >> $DIR/log
 echo -e "\n" >> $DIR/log
 
-wget --load-cookies=$DIR/cookies.txt $wallpaper -O $DIR/wallpaperpic &> /dev/null
+wget --load-cookies=$DIR/cookies.txt $wallpaper -O $DIR/wallpaperpic &> /dev/null &
+wait
 gsettings set org.gnome.desktop.background picture-uri file://$DIR/wallpaperpic
 #gsettings set org.gnome.desktop.background picture-options "zoom"
 
