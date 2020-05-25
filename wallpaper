@@ -103,7 +103,7 @@ echo -e "\n" >> $DIR/log
 wget --load-cookies=$DIR/cookies.txt $wallpaper -O $DIR/wallpaperpic &> /dev/null &
 wait
 
-if [[ $useFeh == true ]]; then
+if [[ $useFeh == true || $DESKTOP_SESSION == i3 ]]; then
 	feh --bg-fill $DIR/wallpaperpic
 else
 	gsettings set org.gnome.desktop.background picture-uri file://$DIR/wallpaperpic
