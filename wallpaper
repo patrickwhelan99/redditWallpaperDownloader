@@ -8,8 +8,9 @@ echo -e "Usage:\n\t-l:\tFilename to take links from\n\t-q:\tEnables quiet mode";
 }
 
 enableQuiet=false
+useFeh=false
 
-while getopts "l:q" o; do
+while getopts "l:qi" o; do
     case "${o}" in
         l)
             linksFile=${OPTARG}
@@ -17,6 +18,9 @@ while getopts "l:q" o; do
         q)
             enableQuiet=${OPTARG}
             ;;
+	i)
+	    useFeh=true
+	    ;;
         *)
 	    printUsage
 	    exit -1
@@ -80,6 +84,7 @@ while [ -z $wallpaper ]; do
 	sed -i '/i.imgur.com\/vFrZ1C9.png/d' $DIR/downloads/temp
 	sed -i '/i.imgur.com\/FqnC5e2.png/d' $DIR/downloads/temp
 	sed -i '/i.imgur.com\/4PxSX4e.png/d' $DIR/downloads/temp
+	sed -i '/i.redd.it\/jsyu3p9xzlf41.jpg/d' $DIR/downloads/temp
 
 	# select randomly from file and DL
 	wallpaper=$(shuf -n 1 $DIR/downloads/temp)
@@ -97,8 +102,13 @@ echo -e "\n" >> $DIR/log
 
 wget --load-cookies=$DIR/cookies.txt $wallpaper -O $DIR/wallpaperpic &> /dev/null &
 wait
-gsettings set org.gnome.desktop.background picture-uri file://$DIR/wallpaperpic
-#gsettings set org.gnome.desktop.background picture-options "zoom"
+
+if [[ $useFeh == true ]]; then
+	feh --bg-fill $DIR/wallpaperpic
+else
+	gsettings set org.gnome.desktop.background picture-uri file://$DIR/wallpaperpic
+	#gsettings set org.gnome.desktop.background picture-options "zoom"
+fi
 
 # cleanup
 cd ~
