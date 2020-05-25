@@ -4,13 +4,13 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" # Get the script's curre
 
 
 function printUsage {
-echo -e "Usage:\n\t-l:\tFilename to take links from\n\t-q:\tEnables quiet mode";
+echo -e "Usage:\n\t-l:\tFilename to take links from\n\t-q:\tEnables quiet mode\n\t-f:\tUse feh instead of gnome-shell";
 }
 
 enableQuiet=false
 useFeh=false
 
-while getopts "l:qi" o; do
+while getopts "l:qf" o; do
     case "${o}" in
         l)
             linksFile=${OPTARG}
@@ -18,7 +18,7 @@ while getopts "l:qi" o; do
         q)
             enableQuiet=${OPTARG}
             ;;
-	i)
+	f)
 	    useFeh=true
 	    ;;
         *)
