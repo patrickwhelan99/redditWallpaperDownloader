@@ -70,9 +70,18 @@ if [[ $enableQuiet == false && -z $singleSub ]]; then
 	cat $linksFile | grep -v -E "^#" | cut -d\/ -f "5" | column -x
 fi
 
+loopCounter=0
 
 # Sometimes reddit doesn't populate the pages quick enough! We need to check there are images to download, if not try again
 while [ -z $wallpaper ]; do
+
+	let loopCounter++
+
+	if [[ $loopCounter > 5 ]]; then
+		echo -e "Failed to find any images!\nCheck your URLs are correct\nSee https://github.com/patrickwhelan99/redditWallpaperDownloader/blob/master/links for an example"
+		rm -r $DIR/downloads
+		exit -2;
+	fi
 
 	if [ -z $singleSub ]; then
 		subRedditChosenFrom="$(shuf -n 1 $linksFile)"
@@ -119,5 +128,4 @@ else
 fi
 
 # cleanup
-cd ~
 rm -r $DIR/downloads
