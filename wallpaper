@@ -4,17 +4,20 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" # Get the script's curre
 
 
 function printUsage {
-echo -e "Usage:\n\t-l:\tFilename to take links from\n\t-q:\tEnables quiet mode\n\t-f:\tUse feh instead of gnome-shell";
+echo -e "Usage:\n\t-l:\tFilename to take links from\n\t-r:\tSpecify a single subreddit to download from\n\t-q:\tEnables quiet mode\n\t-f:\tUse feh instead of gnome-shell";
 }
 
 enableQuiet=false
 useFeh=false
 
-while getopts "l:qf" o; do
+while getopts "l:r:qf" o; do
     case "${o}" in
         l)
             linksFile=${OPTARG}
             ;;
+	r)
+	    singleSub=${OPTARG}
+	    ;;
         q)
             enableQuiet=${OPTARG}
             ;;
@@ -31,7 +34,7 @@ shift $((OPTIND-1))
 
 if [[ "$linksFile" == "" ]]; then
 	linksFile="$DIR/links"
-	if [[ $enableQuiet == false ]]; then
+	if [[ $enableQuiet == false && -z $singleSub ]]; then
 		echo -e "\n\nAssuming links file is \"links\""
 	fi
 fi
@@ -62,7 +65,7 @@ parse $DIR/downloads/$rname $DIR/downloads/$tname $DIR/downloads/$rrname $DIR/do
 }
 
 
-if [[ $enableQuiet == false ]]; then
+if [[ $enableQuiet == false && -z $singleSub ]]; then
 	echo -e "Subreddits to choose from\n"
 	cat $linksFile | grep -v -E "^#" | cut -d\/ -f "5" | column -x
 fi
@@ -71,7 +74,12 @@ fi
 # Sometimes reddit doesn't populate the pages quick enough! We need to check there are images to download, if not try again
 while [ -z $wallpaper ]; do
 
-	subRedditChosenFrom="$(shuf -n 1 $linksFile)"
+	if [ -z $singleSub ]; then
+		subRedditChosenFrom="$(shuf -n 1 $linksFile)"
+	else
+		subRedditChosenFrom="http://www.reddit.com/r/$singleSub"
+	fi
+
 	downloadPages "$subRedditChosenFrom"&
 	pids+=" "$!""
 
