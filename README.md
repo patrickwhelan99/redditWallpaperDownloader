@@ -1,3 +1,6 @@
+# Need a new desktop wallapaper? Automate it! 
+
+
 <p align='center'>
   <img src="https://img.shields.io/static/v1?label=Maintained&message=Yes&color=success"/>
   <img src="https://img.shields.io/github/issues/patrickwhelan99/redditWallpaperDownloader"/>
@@ -10,7 +13,6 @@
   <img src="https://img.shields.io/static/v1?label=Made%20With&message=Bash&color=informational"/>
 <p/>
 
-# Need a new desktop wallapaper? Automate it! 
 
 ## Requirements
 #### Core-utils
