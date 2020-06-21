@@ -1,4 +1,4 @@
-# Need a new desktop wallapaper? Automate it! 
+# Need a new desktop wallpaper? Automate it! 
 
 
 <p align='center'>
